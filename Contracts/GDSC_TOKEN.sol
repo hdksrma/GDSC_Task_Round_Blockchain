@@ -2,86 +2,91 @@
 
 pragma solidity ^0.8.17;
 
-interface IERC20 {
+abstract contract IERC20 {
 
-    function totalSupply() external view returns (uint256);
-    function balanceOf(address account) external view returns (uint256);
-    function allowance(address owner, address spender) external view returns (uint256);
+    //functions
+    
+    function name() public view virtual returns (string memory);
+    function symbol() public view virtual returns (string memory);
+    function decimals() public view virtual returns (uint8);
+    function totalSupply() public view virtual returns (uint256);
+    function balanceOf(address _owner) public view virtual returns (uint256 balance);
+    function approve(address _spender, uint256 _value) public virtual returns (bool success);
+    function allowance(address _owner, address _spender) public view virtual returns (uint256 remaining);
+    function transferFrom(address _from, address _to, uint256 _value) public virtual returns (bool success);
+    function transfer(address _to, uint256 _value) public virtual returns (bool success);
 
-    function transfer(address recipient, uint256 amount) external returns (bool);
-    function approve(address spender, uint256 amount) external returns (bool);
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+    //events
 
-
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Transfer(address indexed _from, address indexed _to, uint256 _value);
+    event Approval(address indexed _owner, address indexed _spender, uint256 _value);
 }
 
+contract GDSC is IERC20 {
 
-contract ERC20 is IERC20 {
-    using SafeMath for uint256;
+    string public _name;
+    string public _symbol;
+    uint8 public _decimals;
+    uint256 public _totalSupply;
 
-    string public constant name = "GDSCToken";
-    string public constant symbol = "GDSC";
-    uint8 public constant decimals = 18;
+    mapping (address => uint) balances;
+    mapping (address => mapping (address => uint)) allowances;
 
-    mapping(address => uint256) balances;
-    mapping(address => mapping (address => uint256)) allowed;
+    constructor() {
 
-    uint256 totalSupply_;
-
-    constructor(uint256 total) {
-        totalSupply_ = total;
-        balances[msg.sender] = totalSupply_;
+        _name = "GDSCToken";
+        _symbol = "GDSC";
+        _decimals = 18;
+        _totalSupply = 1000000 * 10** _decimals;
+        balances[msg.sender] = _totalSupply;
+        emit Transfer(address(0), msg.sender, _totalSupply);
     }
 
-    function totalSupply() public override view returns (uint256) {
-        return totalSupply_;
+    function name() public view override returns (string memory){
+        return _name;
     }
 
-    function balanceOf(address tokenOwner) public override view returns (uint256) {
-        return balances[tokenOwner];
+    function symbol() public view override returns (string memory){
+        return _symbol;
     }
 
-    function transfer(address receiver, uint256 numTokens) public override returns (bool) {
-        require(numTokens <= balances[msg.sender]);
-        balances[msg.sender] = balances[msg.sender].sub(numTokens);
-        balances[receiver] = balances[receiver].add(numTokens);
-        emit Transfer(msg.sender, receiver, numTokens);
+    function decimals() public view override returns (uint8){
+        return _decimals;
+    }
+
+    function totalSupply() public view override returns (uint256){
+        return _totalSupply;
+    }
+
+    function balanceOf(address _owner) public view override returns (uint256 balance){
+        return balances[_owner];
+    }
+
+    function approve(address _spender, uint256 _value) public override returns (bool success){
+        allowances[msg.sender][_spender] = _value;
+        emit Approval(msg.sender, _spender, _value);
+         
+
+        return true; 
+    }
+
+    function allowance(address _owner, address _spender) public view override returns (uint256 remaining){
+        return allowances[_owner][_spender];
+    }
+
+    function transferFrom(address _from, address _to, uint256 _value) public override returns (bool success){
+        require(balances[_from] >= _value);
+        balances[_from] -= _value;
+        balances[_to] += _value;
+        emit Transfer(_from, _to, _value);
         return true;
     }
 
-    function approve(address delegate, uint256 numTokens) public override returns (bool) {
-        allowed[msg.sender][delegate] = numTokens;
-        emit Approval(msg.sender, delegate, numTokens);
+    function transfer(address _to, uint256 _value) public override returns (bool success){
+        transferFrom(msg.sender, _to, _value);
         return true;
     }
 
-    function allowance(address owner, address delegate) public override view returns (uint) {
-        return allowed[owner][delegate];
-    }
+    
 
-    function transferFrom(address owner, address buyer, uint256 numTokens) public override returns (bool) {
-        require(numTokens <= balances[owner]);
-        require(numTokens <= allowed[owner][msg.sender]);
-
-        balances[owner] = balances[owner].sub(numTokens);
-        allowed[owner][msg.sender] = allowed[owner][msg.sender].sub(numTokens);
-        balances[buyer] = balances[buyer].add(numTokens);
-        emit Transfer(owner, buyer, numTokens);
-        return true;
-    }
-}
-
-library SafeMath {
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-      assert(b <= a);
-      return a - b;
-    }
-
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-      uint256 c = a + b;
-      assert(c >= a);
-      return c;
-    }
 }
